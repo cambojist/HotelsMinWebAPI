@@ -7,6 +7,7 @@ builder.Services.AddDbContext<HotelDb>(options =>
 {
     options.UseSqlite(builder.Configuration.GetConnectionString("Sqlite"));
 });
+builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 
 var app = builder.Build();
 
@@ -20,38 +21,32 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 #region Test CRUD code
-app.MapGet("/hotels", async (HotelDb db) => 
-    await db.Hotels.ToListAsync());
+app.MapGet("/hotels", async (IHotelRepository repository) => 
+    Results.Ok(await repository.GetHotelsAsync()));
 
-app.MapGet("/hotels/{id:int}", async (int id, HotelDb db) =>
-    await db.Hotels.FirstOrDefaultAsync(h => h.Id == id) is { } hotel 
+app.MapGet("/hotels/{id:int}", async (int id, IHotelRepository repository) =>
+    await repository.GetHotelAsync(id) is { } hotel 
     ? Results.Ok(hotel)
     : Results.NotFound());
 
-app.MapPost("/hotels", async ([FromBody] Hotel hotel, HotelDb db) =>
+app.MapPost("/hotels", async ([FromBody] Hotel hotel, IHotelRepository repository) =>
 {
-    db.Hotels.Add(hotel);
-    await db.SaveChangesAsync();
+    await repository.InsertHotelAsync(hotel);
+    await repository.SaveAsync();
     return Results.Created($"/hotels/{hotel.Id}", hotel);
 });
 
-app.MapPut("/hotels", async ([FromBody] Hotel hotel, HotelDb db) =>
+app.MapPut("/hotels", async ([FromBody] Hotel hotel, IHotelRepository repository) =>
 {
-    var hotelFromDb = await db.Hotels.FindAsync(hotel.Id);
-    if (hotelFromDb == null) return Results.NotFound();
-    hotelFromDb.Longitude = hotel.Longitude;
-    hotelFromDb.Latitude = hotel.Latitude;
-    hotelFromDb.Name = hotel.Name;
-    await db.SaveChangesAsync();
+    await repository.UpdateHotelAsync(hotel);
+    await repository.SaveAsync();
     return Results.NoContent();
 });
 
-app.MapDelete("/hotels/{id:int}", async (int id, HotelDb db) =>
+app.MapDelete("/hotels/{id:int}", async (int id, IHotelRepository repository) =>
 {
-    var hotelFromDb = await db.Hotels.FindAsync(id);
-    if (hotelFromDb == null) return Results.NotFound();
-    db.Hotels.Remove(hotelFromDb);
-    await db.SaveChangesAsync();
+    await repository.DeleteHotelAsync(id);
+    await repository.SaveAsync();
     return Results.NoContent();
 });
 #endregion
