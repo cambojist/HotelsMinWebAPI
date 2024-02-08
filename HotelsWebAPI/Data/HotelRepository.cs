@@ -4,11 +4,32 @@ namespace HotelsWebAPI.Data;
 
 public sealed class HotelRepository(HotelDb context) : IHotelRepository
 {
-    public async Task<List<Hotel>> GetHotelsAsync() => await context.Hotels.ToListAsync();
+    private bool _disposed;
 
-    public async Task<Hotel> GetHotelAsync(int id) => await context.Hotels.FindAsync(id);
+    public async Task<List<Hotel>> GetHotelsAsync()
+    {
+        return await context.Hotels.ToListAsync();
+    }
 
-    public async Task InsertHotelAsync(Hotel hotel) => await context.Hotels.AddAsync(hotel);
+    public async Task<Hotel> GetHotelAsync(int id)
+    {
+        return await context.Hotels.FindAsync(id);
+    }
+
+    public async Task<List<Hotel>> GetHotelsAsync(Coordinate coordinate)
+    {
+        return await context.Hotels.Where(hotel =>
+            hotel.Latitude > coordinate.Latitude - 1 &&
+            hotel.Latitude < coordinate.Latitude + 1 &&
+            hotel.Longitude > coordinate.Longitude - 1 &&
+            hotel.Longitude < coordinate.Longitude + 1
+        ).ToListAsync();
+    }
+
+    public async Task InsertHotelAsync(Hotel hotel)
+    {
+        await context.Hotels.AddAsync(hotel);
+    }
 
     public async Task UpdateHotelAsync(Hotel hotel)
     {
@@ -26,20 +47,21 @@ public sealed class HotelRepository(HotelDb context) : IHotelRepository
         context.Hotels.Remove(hotelFromDb);
     }
 
-    public async Task SaveAsync() => await context.SaveChangesAsync();
+    public async Task SaveAsync()
+    {
+        await context.SaveChangesAsync();
+    }
 
-    private bool _disposed;
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
     private void Dispose(bool disposing)
     {
         if (_disposed) return;
         if (disposing) context.Dispose();
         _disposed = true;
-    }
-    
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
     }
 }

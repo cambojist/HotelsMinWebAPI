@@ -72,6 +72,12 @@ app.MapDelete("/hotels/{id:int}", async (int id, IHotelRepository repository) =>
     .WithName("DeleteHotel")
     .WithTags("DELETE");
 
+app.MapGet("hotels/search/location/{coordinate}",
+    async (Coordinate coordinate, IHotelRepository repository) =>
+        await repository.GetHotelsAsync(coordinate) is IEnumerable<Hotel> hotels
+            ? Results.Ok(hotels)
+            : Results.NotFound(Array.Empty<Hotel>()));
+
 #endregion
 
 app.Run();
